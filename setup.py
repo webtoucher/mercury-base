@@ -1,14 +1,14 @@
 from setuptools import setup
 
 setup(name='mercury-base',
-      version='1.0',
+      version='1.0a',
       url='https://github.com/webtoucher/mercury-base',
       license='BSD-3-Clause',
       author='Alexey Kuznetsov',
       author_email='mirakuru@webtoucher.ru',
       description='Toolkit for communicating with Incotex Mercury meters via RS485/CAN bus',
       classifiers=[
-          'Development Status :: 1 - Planning',
+          'Development Status :: 3 - Alpha',
           'Intended Audience :: Developers',
           'Topic :: Terminal :: Serial',
           'License :: OSI Approved :: BSD License',

@@ -1,52 +1,44 @@
 # coding=utf8
-from mercury_base.meter import Meter
+from mercury_base import Meter
 from mercury_base.utils import chunk_string, hex_str, to_datetime
 
 
 def get_group_address(meter: Meter):
-    """Возвращает групповой адрес"""
     data = meter.send_command(0x20)
     return hex_str(data)
 
 
 def get_datetime(meter: Meter):
-    """Возвращает текущую дату и время"""
     data = meter.send_command(0x21)
     return to_datetime(data, '01%H%M%S%d%m%y', '%Y-%m-%d %H:%M:%S')
 
 
 def get_power_limit(meter: Meter):
-    """Возвращает лимит мощности (кВт)"""
     data = meter.send_command(0x22)
     return int(hex_str(data)) / 100.
 
 
 def get_month_energy_limit(meter: Meter):
-    """Возвращает лимит энергии за месяц (кВт)"""
     data = meter.send_command(0x23)
     return int(hex_str(data)) / 100.
 
 
 def get_is_seasonal_time(meter: Meter):
-    """Проверяет, сезонное ли время"""
     data = meter.send_command(0x24)
     return data != 0x0
 
 
 def get_time_correction(meter: Meter):
-    """Возвращает величину коррекции времени"""
     data = meter.send_command(0x25)
     return data[0]
 
 
 def get_power(meter: Meter):
-    """Возвращает текущую мощность в нагрузке"""
     data = meter.send_command(0x26)
     return int(hex_str(data)) / 100.
 
 
 def get_energy_accumulators(meter: Meter):
-    """Возвращает значения тарифных аккумуляторов"""
     data = meter.send_command(0x27)
     return [
         int(hex_str(data[0:4])) / 100.,
@@ -57,7 +49,6 @@ def get_energy_accumulators(meter: Meter):
 
 
 def get_firmware_info(meter: Meter):
-    """Возвращает идентификационные данные"""
     data = meter.send_command(0x28)
     return {
         'version': str(int(hex_str(data[0:2]))) + '.' + str(int(hex_str(data[0:2]))),
@@ -66,67 +57,42 @@ def get_firmware_info(meter: Meter):
 
 
 def get_battery_voltage(meter: Meter):
-    """Возвращает напряжение на литиевой батарее (В)"""
     data = meter.send_command(0x29)
     return int(hex_str(data)) / 100.
 
 
 def get_display_filters(meter: Meter):
-    r"""
-    Возвращает фильтры индикации в виде битовой маски
-    0 – индикация текущего тарифа
-    bit0 – разрешает индикацию 1 тарифа
-    bit1 – разрешает индикацию 2 тарифа
-    bit2 – разрешает индикацию 3 тарифа
-    bit3 – разрешает индикацию 4 тарифа
-    bit4 – разрешает индикацию суммы
-    bit5 – разрешает индикацию мощности
-    bit6 – разрешает индикацию времени
-    bit7 – разрешает индикацию даты
-    """
     data = meter.send_command(0x2A)
     return format(list(data)[0], '0>8b')
 
 
 def get_last_stop_datetime(meter: Meter):
-    """Возвращает дату и время последнего выключения напряжения"""
     data = meter.send_command(0x2B)
     return to_datetime(data, '01%H%M%S%d%m%y', '%Y-%m-%d %H:%M:%S')
 
 
 def get_last_start_datetime(meter: Meter) -> str:
-    """Возвращает дату и время последнего включения напряжения"""
     data = meter.send_command(0x2C)
     return to_datetime(data, '01%H%M%S%d%m%y', '%Y-%m-%d %H:%M:%S')
 
 
 def get_output_optocoupler_function(meter: Meter) -> int:
-    """
-    Возвращает функцию выходного оптрона
-    0 - телеметрический выход 5000 имп/кВт.ч
-    1 - телеметрический выход 10000 имп/кВт.ч
-    2 - выход частоты встроенного кварца поделенной на 8
-    3 - управление нагрузкой
-    """
     data = meter.send_command(0x2D)
     return int(hex_str(data))
 
 
 def get_tariffs_count(meter: Meter) -> int:
-    """Возвращает число действующих тарифов"""
     data = meter.send_command(0x2E)
     return int(hex_str(data))
 
 
 def get_serial_number(meter: Meter) -> int:
-    """Возвращает серийный номер"""
     data = meter.send_command(0x2F)
     serial_number = hex_str(data)
     return int(serial_number, 16)
 
 
 def get_holidays(meter: Meter) -> list:
-    """Возвращает праздничные дни"""
     holidays = []
     for part in [0, 1]:
         data = meter.send_command(0x30, part)
@@ -138,7 +104,6 @@ def get_holidays(meter: Meter) -> list:
 
 
 def get_vcp(meter: Meter) -> dict:
-    """Возвращает текущие показания напряжения (В), тока (А) и потребляемой мощности (кВт/ч)"""
     data = meter.send_command(0x63)
     return {
         'voltage': int(hex_str(data[0:2])) / 10.,
@@ -148,23 +113,12 @@ def get_vcp(meter: Meter) -> dict:
 
 
 def get_tariff(meter: Meter) -> int:
-    """Возвращает номер выбранного тарифа"""
     data = meter.send_command(0x60)
     return int(hex_str(data))
 
 
 def set_display_filters(meter: Meter, params) -> bool:
     """
-    Устанавливает фильтры индикации в виде битовой маски
-    0 – индикация текущего тарифа
-    bit0 – разрешает индикацию 1 тарифа
-    bit1 – разрешает индикацию 2 тарифа
-    bit2 – разрешает индикацию 3 тарифа
-    bit3 – разрешает индикацию 4 тарифа
-    bit4 – разрешает индикацию суммы
-    bit5 – разрешает индикацию мощности
-    bit6 – разрешает индикацию времени
-    bit7 – разрешает индикацию даты
     TODO
     """
     return True

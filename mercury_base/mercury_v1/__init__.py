@@ -1,5 +1,6 @@
 # coding=utf8
-from mercury_base.meter import ADDRESS_FMT
+from mercury_base import ADDRESS_FMT
+from mercury_base.mercury_v1 import commands
 from struct import unpack
 
 

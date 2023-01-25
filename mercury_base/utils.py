@@ -40,7 +40,7 @@ def upper_hex(byte: Union[str, bytes, int]) -> str:
     return '%02X' % byte
 
 
-def hex_str(byte_string, splitter=' ') -> str:
+def hex_str(byte_string, splitter='') -> str:
     r"""
     >>> hex_str('Python', ' ')
     '50 79 74 68 6F 6E'
