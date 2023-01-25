@@ -10,7 +10,7 @@ setup(name='mercury-base',
       classifiers=[
           'Development Status :: 3 - Alpha',
           'Intended Audience :: Developers',
-          'Topic :: Terminal :: Serial',
+          'Topic :: Terminals :: Serial',
           'License :: OSI Approved :: BSD License',
           'Programming Language :: Python :: 3',
           'Operating System :: Unix',
