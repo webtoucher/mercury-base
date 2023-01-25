@@ -41,4 +41,4 @@ if __name__ == '__main__':
 
 Со списком доступных команд можно ознакомиться в документации соответствующего протокола:
 
-- [Mercury V1](mercury_base/mercury_v1/README.md) (для однофазных счётчиков Меркурий 200, 201, 203 и 206)
+- [Mercury V1](https://github.com/webtoucher/mercury-base/blob/master/mercury_base/mercury_v1/README.md) (для однофазных счётчиков Меркурий 200, 201, 203 и 206)
