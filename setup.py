@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='mercury-base',
-      version='1.0a',
+      version='1.0a1',
       url='https://github.com/webtoucher/mercury-base',
       license='BSD-3-Clause',
       author='Alexey Kuznetsov',
@@ -16,6 +16,6 @@ setup(name='mercury-base',
           'Operating System :: Unix',
       ],
       packages=['mercury_base'],
-      long_description=open('README.md').read(),
+      long_description=open('README.md', encoding='utf-8').read(),
       long_description_content_type='text/markdown',
       zip_safe=False)
