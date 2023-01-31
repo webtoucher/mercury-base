@@ -4,12 +4,13 @@ Toolkit for communicating with Incotex Mercury meters via RS485/CAN bus
 Copyright (c) 2023 webtoucher
 Distributed under the BSD 3-Clause license. See LICENSE for more info.
 """
-import importlib
 import serial
 import time
 
+from mercury_base import mercury_v1, mercury_v2
 from mercury_base.utils import hex_str
 from modbus_crc import add_crc, check_crc
+from operator import itemgetter
 from struct import pack
 from typing import Final
 
@@ -36,91 +37,74 @@ class CheckSumError(CommunicationError):
 
 ADDRESS_FMT: Final[str] = '!I'  # unsigned integer in network order
 
-TYPE_200: Final[str] = '200'
-TYPE_201: Final[str] = '201'
-TYPE_203: Final[str] = '203'
-TYPE_206: Final[str] = '206'
-TYPE_203_2TD: Final[str] = '203.2TD'
-TYPE_204: Final[str] = '204'
-TYPE_208: Final[str] = '208'
-TYPE_230: Final[str] = '230'
-TYPE_231: Final[str] = '231'
-TYPE_234: Final[str] = '234'
-TYPE_236: Final[str] = '236'
-TYPE_238: Final[str] = '238'
-
-TYPES_V1: Final[list] = [
-    TYPE_200,
-    TYPE_201,
-    TYPE_203,
-    TYPE_206,
-]
-
-TYPES_V2: Final[list] = [
-    TYPE_203_2TD,
-    TYPE_204,
-    TYPE_208,
-    TYPE_230,
-    TYPE_231,
-    TYPE_234,
-    TYPE_236,
-    TYPE_238,
-]
-
 
 class Meter(object):
-    def __init__(self, meter_type: str, address: int, port: str, logger=None,
-                 baudrate=9600, parity=serial.PARITY_NONE, bytesize=8, stopbits=1, timeout=0.05):
-        self.__type = meter_type
+    def __init__(self, address: int, port: str, logger=None,
+                 baudrate=9600, parity=serial.PARITY_NONE,
+                 bytesize=8, stopbits=1, timeout=0.05):
+        self.__model = None
+        self.__features = []
         self.__address = address
         self.__port = port
         self.__logger = logger
         self.__serial_number = None
-
-        if meter_type in TYPES_V1:
-            module = 'mercury_v1'
-        elif meter_type in TYPES_V2:
-            raise ConnectError('Meter Mercury %s is not supported yet' % meter_type)
-        else:
-            raise ConnectError('Meter Mercury %s is not supported' % meter_type)
-
-        self.__driver = importlib.import_module('.%s' % module, __package__)
         self.__connection = serial.Serial(port=port, baudrate=baudrate, parity=parity,
                                           bytesize=bytesize, stopbits=stopbits, timeout=timeout)
-        self.__serial_number = self.command('get_serial_number')
+
+        self.__check_meter(mercury_v1) or self.__check_meter(mercury_v2)
+
         if not self.__serial_number:
-            raise ConnectError('Meter at address %s did not respond' % self.__address)
+            raise ConnectError('Meter at address %s did not respond or not supported' % self.__address)
         if self.__logger:
             self.__logger.info('Meter with serial number %s is connected', self.__serial_number)
 
-    @property
-    def type(self):
-        return self.__type
+    def __check_meter(self, driver) -> None:
+        self.__driver = driver
+        self.__serial_number = self.command('get_serial_number')
+        if self.__serial_number:
+            self.__model, self.__features = itemgetter('model', 'features')(self.command('get_info'))
+            return
+        self.__driver = None
 
     @property
-    def serial_number(self):
+    def model(self) -> str:
+        return self.__model
+
+    @property
+    def features(self) -> list[str]:
+        return self.__features
+
+    @property
+    def serial_number(self) -> int:
         return self.__serial_number
 
-    def has_command(self, command) -> bool:
+    def has_command(self, command: str) -> bool:
         """ Check if command exists """
         return hasattr(self.__driver.commands, command)
 
-    def command(self, command, *params):
+    def command(self, command: str, *params) -> any:
         """ Send command to the meter """
         command_method = getattr(self.__driver.commands, command)
         return command_method(self, *params)
 
-    def send_package(self, package: bytes, attempts=3):
+    def test_package(self, package: bytes) -> bool:
+        """ Check is package correct for this meter """
+        try:
+            return self.__address == self.__driver.extract_address(package)
+        except Exception:
+            return False
+
+    def send_package(self, package: bytes, attempts=5) -> bytes:
         """ Send raw data to the meter """
         buffer_size = 1024
         answer = None
         if not check_crc(package):
             raise CheckSumError('Outgoing package is incorrect')
+        self.__connection.write(package)
+        if self.__logger:
+            self.__logger.debug('--> [%s]\t%s', self.__serial_number or 'new meter', hex_str(package, ' '))
         while not answer and attempts:
             attempts -= 1
-            self.__connection.write(package)
-            if self.__logger:
-                self.__logger.debug('--> [%s]\t%s', self.__serial_number or 'new meter', hex_str(package, ' '))
             time.sleep(0.1)
             answer = self.__connection.read(buffer_size)
             if answer:
@@ -136,7 +120,7 @@ class Meter(object):
                     self.__logger.debug('<-- [%s]\t%s', self.__serial_number or 'new meter', hex_str(answer, ' '))
         return answer
 
-    def send_command(self, *params, attempts=3):
+    def send_command(self, *params, attempts=5) -> bytes:
         address = pack(ADDRESS_FMT, self.__address)
         package = add_crc(address + bytes(params))
         received_package = self.send_package(package, attempts=attempts)

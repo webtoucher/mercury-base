@@ -19,7 +19,7 @@ $ pip install mercury-base
 Либо добавьте в файл requirements.txt вашего проекта на python в качестве зависимости:
 
 ```
-mercury-base~=1.0a2
+mercury-base~=1.0a4
 ```
 
 ## Использование
@@ -29,10 +29,11 @@ mercury-base~=1.0a2
 подключенного к последовательному порту /dev/ttyACM0:
 
 ```python
-from mercury_base import Meter, TYPE_206
+from mercury_base import Meter
 
 if __name__ == '__main__':
-    meter = Meter(TYPE_206, 12345678, '/dev/ttyACM0')
+    meter = Meter(12345678, '/dev/ttyACM0')
+    print('Модель счётчика - Меркурий %s' % meter.model)
     current_power = meter.command('get_power')
     print('Текущая мощность в нагрузке - %s кВт' % current_power)
 ```

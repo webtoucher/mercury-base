@@ -3,6 +3,50 @@ from mercury_base import Meter
 from mercury_base.utils import chunk_string, hex_str, to_datetime
 
 
+def get_serial_number(meter: Meter) -> int:
+    data = meter.send_command(0x2F)
+    serial_number = hex_str(data)
+    return int(serial_number, 16)
+
+
+def get_info(meter: Meter) -> dict:
+    model = None
+    features = []
+    data = meter.send_command(0x86, 255)
+    if data[1] == 2:
+        model = '200'
+    elif data[1] == 4:
+        model = '203.2T'
+        if data[2] == 1:
+            features.append('relay')
+        elif data[2] == 3:
+            features.append('100(L)')
+    elif data[1] == 6:
+        model = '203.2TR'
+        if data[2] == 1:
+            features.append('relay')
+        elif data[2] == 3:
+            features.append('100(L)')
+    elif data[1] == 8:
+        model = '206'
+        if data[2] in [1, 2, 4]:
+            features.append('RS485')
+        if data[2] in [3, 5]:
+            features.append('PLC')
+        if data[2] in [2, 3, 4, 5]:
+            features.append('relay')
+            if data[2] in [4, 5]:
+                features.append('auto power on')
+    elif data[1] == 10:
+        model = '201.8TLO'
+        if data[2] == 3:
+            features.append('relay')
+    return {
+        'model': model,
+        'features': features,
+    }
+
+
 def get_group_address(meter: Meter):
     data = meter.send_command(0x20)
     return hex_str(data)
@@ -25,7 +69,7 @@ def get_month_energy_limit(meter: Meter):
 
 def get_is_seasonal_time(meter: Meter):
     data = meter.send_command(0x24)
-    return data != 0x0
+    return data[0] != 0
 
 
 def get_time_correction(meter: Meter):
@@ -33,7 +77,7 @@ def get_time_correction(meter: Meter):
     return data[0]
 
 
-def get_power(meter: Meter):
+def get_load_power(meter: Meter):
     data = meter.send_command(0x26)
     return int(hex_str(data)) / 100.
 
@@ -83,13 +127,7 @@ def get_output_optocoupler_function(meter: Meter) -> int:
 
 def get_tariffs_count(meter: Meter) -> int:
     data = meter.send_command(0x2E)
-    return int(hex_str(data))
-
-
-def get_serial_number(meter: Meter) -> int:
-    data = meter.send_command(0x2F)
-    serial_number = hex_str(data)
-    return int(serial_number, 16)
+    return data[0]
 
 
 def get_holidays(meter: Meter) -> list:
@@ -114,11 +152,21 @@ def get_vcp(meter: Meter) -> dict:
 
 def get_tariff(meter: Meter) -> int:
     data = meter.send_command(0x60)
-    return int(hex_str(data))
+    return data[0]
 
 
-def set_display_filters(meter: Meter, params) -> bool:
-    """
-    TODO
-    """
-    return True
+def get_is_relay_on(meter: Meter) -> bool:
+    data = meter.send_command(0x86, 1)
+    return hex_str(data[1:]) == '55'
+
+
+def get_full_power_and_cos_fi(meter: Meter) -> dict:
+    data = meter.send_command(0x86, 2)
+    cos_fi_bytes = hex_str(data[1:3])
+    cos_fi = int(cos_fi_bytes[1:]) / 1000.
+    if cos_fi_bytes[:1] != '0':
+        cos_fi *= -1
+    return {
+        'cos_fi': cos_fi,
+        'full_power': int(hex_str(data[3:6])) / 1000.,
+    }
