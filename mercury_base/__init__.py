@@ -4,10 +4,11 @@ Toolkit for communicating with Incotex Mercury meters via RS485/CAN bus
 Copyright (c) 2023 webtoucher
 Distributed under the BSD 3-Clause license. See LICENSE for more info.
 """
+import mercury_base.mercury_v1
+import mercury_base.mercury_v2
 import serial
 import time
 
-from mercury_base import mercury_v1, mercury_v2
 from mercury_base.utils import hex_str
 from modbus_crc import add_crc, check_crc
 from operator import itemgetter
@@ -33,9 +34,6 @@ class UnexpectedCommand(CommunicationError):
 
 class CheckSumError(CommunicationError):
     pass
-
-
-ADDRESS_FMT: Final[str] = '!I'  # unsigned integer in network order
 
 
 class Meter(object):
@@ -121,7 +119,7 @@ class Meter(object):
         return answer
 
     def send_command(self, *params, attempts=5) -> bytes:
-        address = pack(ADDRESS_FMT, self.__address)
+        address = pack('!I', self.__address)
         package = add_crc(address + bytes(params))
         received_package = self.send_package(package, attempts=attempts)
         return self.__driver.extract_data(received_package)

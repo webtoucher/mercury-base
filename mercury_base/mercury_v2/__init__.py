@@ -1,11 +1,10 @@
 # coding=utf8
-from mercury_base import ADDRESS_FMT
 from mercury_base.mercury_v2 import commands
 from struct import unpack
 
 
 def extract_address(message: bytes) -> int:
-    address = unpack(ADDRESS_FMT, message[:1])[0]
+    address = unpack('!I', message[:1])[0]
     return address
 
 
