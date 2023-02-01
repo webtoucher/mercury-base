@@ -19,7 +19,7 @@ $ pip install mercury-base
 Либо добавьте в файл requirements.txt вашего проекта на python в качестве зависимости:
 
 ```
-mercury-base~=1.0a6
+mercury-base~=1.0a7
 ```
 
 ## Использование
@@ -33,8 +33,8 @@ from mercury_base import Meter
 
 if __name__ == '__main__':
     meter = Meter(12345678, '/dev/ttyACM0')
-    print('Модель счётчика - Меркурий %s' % meter.model)
-    current_power = meter.command('get_power')
+    print('Модель счётчика - Меркурий %s, серийный номер %s' % meter.model, meter.serial_number)
+    current_power = meter.command('get_load_power')
     print('Текущая мощность в нагрузке - %s кВт' % current_power)
 ```
 
@@ -43,3 +43,4 @@ if __name__ == '__main__':
 Со списком доступных команд можно ознакомиться в документации соответствующего протокола:
 
 - [Mercury V1](https://github.com/webtoucher/mercury-base/blob/master/mercury_base/mercury_v1/README.md) (для однофазных счётчиков Меркурий 200, 201, 203 и 206)
+- [Mercury V2](https://github.com/webtoucher/mercury-base/blob/master/mercury_base/mercury_v2/README.md) (для трёхфазных счётчиков Меркурий 203.2TD, 204, 208, 230, 231, 234, 236, и 238)
