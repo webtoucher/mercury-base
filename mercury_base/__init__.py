@@ -13,7 +13,7 @@ from mercury_base.utils import hex_str
 from modbus_crc import add_crc, check_crc
 from operator import itemgetter
 from struct import pack
-from typing import Final
+from typing import Optional
 
 
 class ConnectError(Exception):
@@ -54,15 +54,16 @@ class Meter(object):
         if not self.__serial_number:
             raise ConnectError('Meter at address %s did not respond or not supported' % self.__address)
         if self.__logger:
-            self.__logger.info('Meter with serial number %s is connected', self.__serial_number)
+            self.__logger.info('Meter M%s with serial number %s is connected', self.__model, self.__serial_number)
 
-    def __check_meter(self, driver) -> None:
+    def __check_meter(self, driver) -> bool:
         self.__driver = driver
         self.__serial_number = self.command('get_serial_number')
         if self.__serial_number:
             self.__model, self.__features = itemgetter('model', 'features')(self.command('get_info'))
-            return
+            return True
         self.__driver = None
+        return False
 
     @property
     def model(self) -> str:
@@ -118,11 +119,12 @@ class Meter(object):
                     self.__logger.debug('<-- [%s]\t%s', self.__serial_number or 'new meter', hex_str(answer, ' '))
         return answer
 
-    def send_command(self, *params, attempts=5) -> bytes:
+    def send_command(self, *params, attempts=5) -> Optional[bytes]:
         address = pack('!I', self.__address)
         package = add_crc(address + bytes(params))
         received_package = self.send_package(package, attempts=attempts)
-        return self.__driver.extract_data(received_package)
+        if received_package:
+            return self.__driver.extract_data(received_package)
 
 
 if __name__ == '__main__':

@@ -1,8 +1,9 @@
 # coding=utf8
-from mercury_base.utils import chunk_string, hex_str, to_datetime
+from mercury_base.utils import hex_str
+from typing import Optional
 
 
-def get_serial_number(meter) -> int:
+def get_serial_number(meter) -> Optional[int]:
     data = meter.send_command(0x00)
     serial_number = hex_str(data[:4])
     return int(serial_number, 16)
