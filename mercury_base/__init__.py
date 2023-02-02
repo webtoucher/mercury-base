@@ -177,5 +177,35 @@ class Meter(object):
             return self.__driver.extract_data(received_package)
 
 
+class Meters(object):
+    """ Collection of connected meters """
+
+    def __init__(self, listener: Optional[MetersEventListener] = None):
+        self.__meters: list[Meter] = []
+        self.__listener = listener
+
+    def connect_meter(self, address: int, port: str, **kwarg) -> bool:
+        """ Connect a meter and add it to the collection """
+        params = {'listener': self.__listener}
+        params.update(kwarg)
+        try:
+            self.add_meter(Meter(address, port, **params))
+            return True
+        except ConnectError:
+            if self.__listener:
+                self.__listener.trigger('failed_connect', self, address, port)
+            return False
+
+    def add_meter(self, meter: Meter) -> None:
+        """ Add a meter to the collection """
+        self.__meters.append(meter)
+
+    def find_by_serial_number(self, serial_number: int) -> Optional[Meter]:
+        return next((meter for meter in self.__meters if meter.serial_number == serial_number), None)
+
+    def find_by_package(self, package: bytes) -> Optional[Meter]:
+        return next((meter for meter in self.__meters if meter.test_package(package)), None)
+
+
 if __name__ == '__main__':
     pass
