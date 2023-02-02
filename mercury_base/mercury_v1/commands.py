@@ -54,7 +54,7 @@ def get_group_address(meter):
 
 def get_datetime(meter):
     data = meter.send_command(0x21)
-    return to_datetime(data, '01%H%M%S%d%m%y', '%Y-%m-%d %H:%M:%S')
+    return to_datetime(data[2:], '%H%M%S%d%m%y', '%Y-%m-%d %H:%M:%S')
 
 
 def get_power_limit(meter):
@@ -112,12 +112,12 @@ def get_display_filters(meter):
 
 def get_last_stop_datetime(meter):
     data = meter.send_command(0x2B)
-    return to_datetime(data, '01%H%M%S%d%m%y', '%Y-%m-%d %H:%M:%S')
+    return to_datetime(data[2:], '%H%M%S%d%m%y', '%Y-%m-%d %H:%M:%S')
 
 
 def get_last_start_datetime(meter) -> str:
     data = meter.send_command(0x2C)
-    return to_datetime(data, '01%H%M%S%d%m%y', '%Y-%m-%d %H:%M:%S')
+    return to_datetime(data[2:], '%H%M%S%d%m%y', '%Y-%m-%d %H:%M:%S')
 
 
 def get_output_optocoupler_function(meter) -> int:
