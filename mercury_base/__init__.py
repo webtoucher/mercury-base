@@ -200,6 +200,10 @@ class Meters(object):
         """ Add a meter to the collection """
         self.__meters.append(meter)
 
+    @property
+    def meters(self) -> list[Meter]:
+        return self.__meters
+
     def find_by_serial_number(self, serial_number: int) -> Optional[Meter]:
         return next((meter for meter in self.__meters if meter.serial_number == serial_number), None)
 
