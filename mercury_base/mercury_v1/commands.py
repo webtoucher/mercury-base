@@ -95,8 +95,8 @@ def get_energy_accumulators(meter):
 def get_firmware_info(meter):
     data = meter.send_command(0x28)
     return {
-        'version': str(int(hex_str(data[0:2]))) + '.' + str(int(hex_str(data[0:2]))),
-        'date': to_datetime(data[2:6], '%d%m%y', '%Y-%m-%d'),
+        'version': str(int(hex_str(data[0:1]))) + '.' + str(int(hex_str(data[1:2]))),
+        'date': to_datetime(data[3:6], '%d%m%y', '%Y-%m-%d'),
     }
 
 
@@ -112,12 +112,12 @@ def get_display_filters(meter):
 
 def get_last_stop_datetime(meter):
     data = meter.send_command(0x2B)
-    return to_datetime(data[2:], '%H%M%S%d%m%y', '%Y-%m-%d %H:%M:%S')
+    return to_datetime(data[1:], '%H%M%S%d%m%y', '%Y-%m-%d %H:%M:%S')
 
 
 def get_last_start_datetime(meter) -> str:
     data = meter.send_command(0x2C)
-    return to_datetime(data[2:], '%H%M%S%d%m%y', '%Y-%m-%d %H:%M:%S')
+    return to_datetime(data[1:], '%H%M%S%d%m%y', '%Y-%m-%d %H:%M:%S')
 
 
 def get_output_optocoupler_function(meter) -> int:

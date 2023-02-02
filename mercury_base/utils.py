@@ -56,11 +56,11 @@ def to_datetime(byte_string, from_format, to_format) -> str:
     r"""
     >>> to_datetime(b'\x16\x01\x23', '%d%m%y', '%Y-%m-%d')
     '2023-01-16'
-    >>> to_datetime(b'\x01\x13\x57\x43\x16\x01\x23', '01%H%M%S%d%m%y', '%Y-%m-%d %H:%M:%S')
+    >>> to_datetime(b'\x13\x57\x43\x16\x01\x23', '%H%M%S%d%m%y', '%Y-%m-%d %H:%M:%S')
     '2023-01-16 13:57:43'
     """
     from_string = hex_str(byte_string)
-    parsed_datetime = datetime.strptime(from_string, from_format).date()
+    parsed_datetime = datetime.strptime(from_string, from_format)
     return parsed_datetime.strftime(to_format)
 
 
