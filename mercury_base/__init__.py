@@ -12,6 +12,7 @@ import time
 from mercury_base.utils import hex_str
 from modbus_crc import add_crc, check_crc
 from operator import itemgetter
+from simple_socket_client import SimpleSocketClient
 from typing import Optional
 
 
@@ -84,18 +85,46 @@ class CheckSumError(CommunicationError):
     pass
 
 
+class DataTransport(object):
+    pass
+
+
+class SerialDataTransport(DataTransport):
+    def __init__(self, port: str, baudrate=9600, parity=serial.PARITY_NONE, bytesize=8, stopbits=1, timeout=0.05):
+        self.__connection = serial.Serial(port=port, baudrate=baudrate, parity=parity,
+                                          bytesize=bytesize, stopbits=stopbits, timeout=timeout)
+
+    def ask(self, package: bytes):
+        buffer_size = 1024
+        attempts = 5
+        answer = None
+        self.__connection.write(package)
+        while not answer and attempts:
+            attempts -= 1
+            time.sleep(0.1)
+            answer = self.__connection.read(buffer_size)
+        return answer
+
+
+class TcpDataTransport(DataTransport):
+    def __init__(self, host: str, port: int):
+        self.__connection = SimpleSocketClient(host, port)
+
+    def ask(self, package: bytes):
+        try:
+            answer = self.__connection.ask(package)
+        except Exception:
+            return None
+
+
 class Meter(object):
-    def __init__(self, address: int, port: str, listener: Optional[MetersEventListener] = None,
-                 baudrate=9600, parity=serial.PARITY_NONE,
-                 bytesize=8, stopbits=1, timeout=0.05):
-        self.__port = port
+    def __init__(self, address: int, transport: DataTransport, listener: Optional[MetersEventListener] = None):
+        self.__transport = transport
         self.__listener = listener
         self.__address = None
         self.__serial_number = None
         self.__model = None
         self.__features = []
-        self.__connection = serial.Serial(port=port, baudrate=baudrate, parity=parity,
-                                          bytesize=bytesize, stopbits=stopbits, timeout=timeout)
 
         self.__check_meter(mercury_v1, address) or self.__check_meter(mercury_v2, address)
 
@@ -143,36 +172,30 @@ class Meter(object):
         except Exception:
             return False
 
-    def send_package(self, package: bytes, attempts=5) -> bytes:
+    def send_package(self, package: bytes) -> bytes:
         """ Send raw data to the meter """
-        buffer_size = 1024
-        answer = None
         if not check_crc(package):
             raise CheckSumError('Outgoing package is incorrect')
-        self.__connection.write(package)
         if self.__listener:
             self.__listener.trigger('request', self, package)
-        while not answer and attempts:
-            attempts -= 1
-            time.sleep(0.1)
-            answer = self.__connection.read(buffer_size)
-            if answer:
-                if not check_crc(answer):
-                    raise CheckSumError('Incoming package is incorrect')
-                address = self.__driver.extract_address(answer)
-                if address != self.__driver.extract_address(package):
-                    raise UnexpectedAddress(address)
-                command = self.__driver.extract_command(answer)
-                if command != self.__driver.extract_command(package):
-                    raise UnexpectedCommand(command)
-                if self.__listener:
-                    self.__listener.trigger('answer', self, answer)
+        answer = self.__transport.ask(package)
+        if answer:
+            if not check_crc(answer):
+                raise CheckSumError('Incoming package is incorrect')
+            address = self.__driver.extract_address(answer)
+            if address != self.__driver.extract_address(package):
+                raise UnexpectedAddress(address)
+            command = self.__driver.extract_command(answer)
+            if command != self.__driver.extract_command(package):
+                raise UnexpectedCommand(command)
+            if self.__listener:
+                self.__listener.trigger('answer', self, answer)
         return answer
 
-    def send_command(self, *params, attempts=5) -> Optional[bytes]:
+    def send_command(self, *params) -> Optional[bytes]:
         address = self.__driver.format_address(self.__address)
         package = add_crc(address + bytes(params))
-        received_package = self.send_package(package, attempts=attempts)
+        received_package = self.send_package(package)
         if received_package:
             return self.__driver.extract_data(received_package)
 
@@ -184,16 +207,16 @@ class Meters(object):
         self.__meters: list[Meter] = []
         self.__listener = listener
 
-    def connect_meter(self, address: int, port: str, **kwarg) -> bool:
+    def connect_meter(self, address: int, transport: DataTransport, **kwarg) -> bool:
         """ Connect a meter and add it to the collection """
         params = {'listener': self.__listener}
         params.update(kwarg)
         try:
-            self.add_meter(Meter(address, port, **params))
+            self.add_meter(Meter(address, transport, **params))
             return True
         except ConnectError:
             if self.__listener:
-                self.__listener.trigger('failed_connect', self, address, port)
+                self.__listener.trigger('failed_connect', self, address)
             return False
 
     def add_meter(self, meter: Meter) -> None:

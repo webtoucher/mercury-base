@@ -6,7 +6,7 @@
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/mercury-base.svg)](https://pypi.python.org/pypi/mercury-base)
 
 Этот набор инструментов предназначен для управления счётчиками марки [Инкотекс](https://www.incotexcom.ru/)
-Меркурий, подключенных к серверу через последовательную шину (RS485/CAN).
+Меркурий, подключенных к серверу через последовательную шину (RS485/CAN) или TCP/IP.
 
 ## Установка
 
@@ -19,7 +19,7 @@ $ pip install mercury-base
 Либо добавьте в файл requirements.txt вашего проекта на python в качестве зависимости:
 
 ```
-mercury-base~=1.0a12
+mercury-base~=1.0a13
 ```
 
 ## Использование
@@ -29,13 +29,20 @@ mercury-base~=1.0a12
 подключенного к последовательному порту /dev/ttyACM0:
 
 ```python
-from mercury_base import Meter
+from mercury_base import Meter, SerialDataTransport
 
-if __name__ == '__main__':
-    meter = Meter(12345678, '/dev/ttyACM0')
-    print('Модель счётчика - Меркурий %s, серийный номер %s' % meter.model, meter.serial_number)
-    current_power = meter.command('get_load_power')
-    print('Текущая мощность в нагрузке - %s кВт' % current_power)
+meter = Meter(12345678, SerialDataTransport('/dev/ttyACM0'))
+print('Модель счётчика - Меркурий %s, серийный номер %s' % meter.model, meter.serial_number)
+current_power = meter.command('get_load_power')
+print('Текущая мощность в нагрузке - %s кВт' % current_power)
+```
+
+Возможно подключение к счётчику по TCP/IP:
+
+```python
+from mercury_base import Meter, TcpDataTransport
+
+meter = Meter(12345678, TcpDataTransport('192.168.0.2', 5051))
 ```
 
 ## Команды
