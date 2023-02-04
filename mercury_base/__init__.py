@@ -9,6 +9,8 @@ import mercury_base.mercury_v2
 import serial
 import time
 
+from abc import ABC, abstractmethod
+from eventemitter import EventEmitter
 from mercury_base.utils import hex_str
 from modbus_crc import add_crc, check_crc
 from operator import itemgetter
@@ -18,55 +20,6 @@ from typing import Optional
 
 class ConnectError(Exception):
     pass
-
-
-class MetersEventListener(object):
-    def __init__(self):
-        self.__listeners = {
-            'connect': [],
-            'request': [],
-            'answer': [],
-        }
-
-    @property
-    def on_connect(self):
-        def decorator(func):
-            self.add_listener('connect', func)
-            return func
-
-        return decorator
-
-    @property
-    def on_request(self):
-        def decorator(func):
-            self.add_listener('request', func)
-            return func
-
-        return decorator
-
-    @property
-    def on_answer(self):
-        def decorator(func):
-            self.add_listener('answer', func)
-            return func
-
-        return decorator
-
-    def add_listener(self, name, func):
-        if not self.__listeners[name]:
-            self.__listeners.update({name: []})
-        if func not in self.__listeners[name]:
-            self.__listeners[name].append(func)
-
-    def remove_listener(self, name, func):
-        if self.__listeners[name] and func in self.__listeners[name]:
-            self.__listeners[name].remove(func)
-
-    def trigger(self, name, *args):
-        if not self.__listeners[name]:
-            return
-        for func in self.__listeners[name]:
-            func(*args)
 
 
 class CommunicationError(Exception):
@@ -85,8 +38,10 @@ class CheckSumError(CommunicationError):
     pass
 
 
-class DataTransport(object):
-    pass
+class DataTransport(ABC):
+    @abstractmethod
+    def ask(self, package: bytes):
+        pass
 
 
 class SerialDataTransport(DataTransport):
@@ -109,18 +64,19 @@ class SerialDataTransport(DataTransport):
 class TcpDataTransport(DataTransport):
     def __init__(self, host: str, port: int):
         self.__connection = SimpleSocketClient(host, port)
+        self.__connection.connect()
 
     def ask(self, package: bytes):
         try:
-            answer = self.__connection.ask(package)
+            return self.__connection.ask(package)
         except Exception:
             return None
 
 
 class Meter(object):
-    def __init__(self, address: int, transport: DataTransport, listener: Optional[MetersEventListener] = None):
+    def __init__(self, address: int, transport: DataTransport, event_emitter: Optional[EventEmitter] = None):
         self.__transport = transport
-        self.__listener = listener
+        self.__event_emitter = event_emitter
         self.__address = None
         self.__serial_number = None
         self.__model = None
@@ -130,8 +86,8 @@ class Meter(object):
 
         if not self.__serial_number:
             raise ConnectError('Meter at address %s did not respond or not supported' % address)
-        if self.__listener:
-            self.__listener.trigger('connect', self)
+        if self.__event_emitter:
+            self.__event_emitter.emit('connect', self)
 
     def __check_meter(self, driver, address: int) -> bool:
         self.__driver = driver
@@ -176,8 +132,8 @@ class Meter(object):
         """ Send raw data to the meter """
         if not check_crc(package):
             raise CheckSumError('Outgoing package is incorrect')
-        if self.__listener:
-            self.__listener.trigger('request', self, package)
+        if self.__event_emitter:
+            self.__event_emitter.emit('request', self, package)
         answer = self.__transport.ask(package)
         if answer:
             if not check_crc(answer):
@@ -188,8 +144,8 @@ class Meter(object):
             command = self.__driver.extract_command(answer)
             if command != self.__driver.extract_command(package):
                 raise UnexpectedCommand(command)
-            if self.__listener:
-                self.__listener.trigger('answer', self, answer)
+            if self.__event_emitter:
+                self.__event_emitter.emit('answer', self, answer)
         return answer
 
     def send_command(self, *params) -> Optional[bytes]:
@@ -203,20 +159,20 @@ class Meter(object):
 class Meters(object):
     """ Collection of connected meters """
 
-    def __init__(self, listener: Optional[MetersEventListener] = None):
+    def __init__(self, event_emitter: Optional[EventEmitter] = None):
         self.__meters: list[Meter] = []
-        self.__listener = listener
+        self.__event_emitter = event_emitter
 
     def connect_meter(self, address: int, transport: DataTransport, **kwarg) -> bool:
         """ Connect a meter and add it to the collection """
-        params = {'listener': self.__listener}
+        params = {'event_emitter': self.__event_emitter}
         params.update(kwarg)
         try:
             self.add_meter(Meter(address, transport, **params))
             return True
         except ConnectError:
-            if self.__listener:
-                self.__listener.trigger('failed_connect', self, address)
+            if self.__event_emitter:
+                self.__event_emitter.emit('failed_connect', self, address)
             return False
 
     def add_meter(self, meter: Meter) -> None:
