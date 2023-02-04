@@ -19,7 +19,7 @@ $ pip install mercury-base
 Либо добавьте в файл requirements.txt вашего проекта на python в качестве зависимости:
 
 ```
-mercury-base~=1.0a13
+mercury-base~=1.0a14
 ```
 
 ## Использование
