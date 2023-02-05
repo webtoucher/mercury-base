@@ -1,14 +1,14 @@
 from setuptools import setup, find_packages
 
 setup(name='mercury-base',
-      version='1.0a15',
+      version='1.1',
       url='https://github.com/webtoucher/mercury-base',
       license='BSD-3-Clause',
       author='Alexey Kuznetsov',
       author_email='mirakuru@webtoucher.ru',
       description='Toolkit for communicating with Incotex Mercury meters via RS485/CAN bus',
       classifiers=[
-          'Development Status :: 3 - Alpha',
+          'Development Status :: 5 - Production/Stable',
           'Intended Audience :: Developers',
           'Topic :: Terminals :: Serial',
           'License :: OSI Approved :: BSD License',
@@ -21,6 +21,6 @@ setup(name='mercury-base',
       install_requires=[
           'modbus-crc~=1.3',
           'pyserial~=3.0',
-          'simple-socket-client~=1.2',
+          'simple-socket-client~=1.3',
       ],
       zip_safe=False)
