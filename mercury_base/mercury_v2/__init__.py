@@ -3,6 +3,7 @@ from mercury_base.mercury_v2 import commands
 from struct import pack, unpack
 
 ADDRESS_FORMAT = '!B'  # 1 byte in network order
+cache = {}
 
 
 def prepare_address(address: int) -> int:
@@ -23,11 +24,10 @@ def extract_address(message: bytes) -> int:
     return address
 
 
-def extract_command(message: bytes) -> bytes:
-    command = list(message[1:2])[0]
-    return command
+def extract_command(message: bytes) -> None:
+    return None
 
 
 def extract_data(message: bytes) -> list[bytes]:
-    data = list(message[2:-2])
+    data = list(message[1:-2])
     return data

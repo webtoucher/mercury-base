@@ -4,6 +4,7 @@ from struct import pack, unpack
 
 
 ADDRESS_FORMAT = '!I'  # 4 bytes in network order
+cache = {}
 
 
 def prepare_address(address: int) -> int:

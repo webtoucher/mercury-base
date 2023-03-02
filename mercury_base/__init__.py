@@ -134,7 +134,7 @@ class Meter(object):
             raise CheckSumError('Outgoing package is incorrect')
         if self.__event_bus:
             self.__event_bus.emit('request', self, package)
-        answer = self.__transport.ask(package)
+        answer = self.__driver.cache.get(package, self.__transport.ask(package))
         if answer:
             if not check_crc(answer):
                 raise CheckSumError('Incoming package is incorrect')
@@ -142,7 +142,7 @@ class Meter(object):
             if address != self.__driver.extract_address(package):
                 raise UnexpectedAddress(address)
             command = self.__driver.extract_command(answer)
-            if command != self.__driver.extract_command(package):
+            if command and command != self.__driver.extract_command(package):
                 raise UnexpectedCommand(command)
             if self.__event_bus:
                 self.__event_bus.emit('answer', self, answer)
