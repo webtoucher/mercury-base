@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='mercury-base',
-      version='1.3',
+      version='1.4',
       url='https://github.com/webtoucher/mercury-base',
       license='BSD-3-Clause',
       author='Alexey Kuznetsov',

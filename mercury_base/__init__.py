@@ -22,6 +22,10 @@ class ConnectError(Exception):
     pass
 
 
+class TransportError(Exception):
+    pass
+
+
 class CommunicationError(Exception):
     pass
 
@@ -46,8 +50,13 @@ class DataTransport(ABC):
 
 class SerialDataTransport(DataTransport):
     def __init__(self, port: str, baudrate=9600, parity=serial.PARITY_NONE, bytesize=8, stopbits=1, timeout=0.05):
-        self.__connection = serial.Serial(port=port, baudrate=baudrate, parity=parity,
-                                          bytesize=bytesize, stopbits=stopbits, timeout=timeout)
+        try:
+            self.__connection = serial.Serial(port=port, baudrate=baudrate, parity=parity,
+                                              bytesize=bytesize, stopbits=stopbits, timeout=timeout)
+        except serial.serialutil.SerialException as err:
+            if len(err.args) > 1:
+                raise TransportError(err.args[1])
+            raise TransportError(err.args[0])
 
     def ask(self, package: bytes):
         buffer_size = 1024
@@ -172,7 +181,7 @@ class Meters(object):
             return True
         except ConnectError:
             if self.__event_bus:
-                self.__event_bus.emit('failed_connect', self, address)
+                self.__event_bus.emit('failed_connect', address)
             return False
 
     def add_meter(self, meter: Meter) -> None:

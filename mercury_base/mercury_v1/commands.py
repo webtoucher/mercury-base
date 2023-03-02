@@ -5,8 +5,9 @@ from typing import Optional
 
 def get_serial_number(meter) -> Optional[int]:
     data = meter.send_command(0x2F)
-    serial_number = hex_str(data)
-    return int(serial_number, 16)
+    if data:
+        serial_number = hex_str(data)
+        return int(serial_number, 16)
 
 
 def get_info(meter) -> dict:
