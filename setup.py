@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(name='mercury-base',
-      version='1.4',
+      version='1.5',
       url='https://github.com/webtoucher/mercury-base',
       license='BSD-3-Clause',
       author='Alexey Kuznetsov',
@@ -21,6 +21,6 @@ setup(name='mercury-base',
       install_requires=[
           'modbus-crc~=1.3',
           'pyserial~=3.0',
-          'simple-socket-client~=1.4',
+          'simple-socket-client~=1.5',
       ],
       zip_safe=False)

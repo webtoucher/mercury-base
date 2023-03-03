@@ -14,7 +14,7 @@ from event_bus import EventBus
 from mercury_base.utils import hex_str
 from modbus_crc import add_crc, check_crc
 from operator import itemgetter
-from simple_socket_client import SimpleSocketClient
+from simple_socket_client import SimpleSocketClient, SimpleSocketClientException
 from typing import Optional
 
 
@@ -55,8 +55,8 @@ class SerialDataTransport(DataTransport):
                                               bytesize=bytesize, stopbits=stopbits, timeout=timeout)
         except serial.serialutil.SerialException as err:
             if len(err.args) > 1:
-                raise TransportError(err.args[1])
-            raise TransportError(err.args[0])
+                raise TransportError(port, err.args[1]) from err
+            raise TransportError(port, err.args[0]) from err
 
     def ask(self, package: bytes):
         buffer_size = 1024
@@ -71,9 +71,12 @@ class SerialDataTransport(DataTransport):
 
 
 class TcpDataTransport(DataTransport):
-    def __init__(self, host: str, port: int):
+    def __init__(self, host: str, port: int, timeout=5):
         self.__connection = SimpleSocketClient(host, port)
-        self.__connection.connect()
+        try:
+            self.__connection.connect(timeout=timeout)
+        except SimpleSocketClientException as err:
+            raise TransportError('%s:%s' % (host, port), err.args[0]) from err
 
     def ask(self, package: bytes):
         try:
