@@ -6,6 +6,7 @@ Distributed under the BSD 3-Clause license. See LICENSE for more info.
 """
 import mercury_base.mercury_v1
 import mercury_base.mercury_v2
+import re
 import serial
 import time
 
@@ -14,6 +15,7 @@ from event_bus import EventBus
 from mercury_base.utils import hex_str
 from modbus_crc import add_crc, check_crc
 from operator import itemgetter
+from pathlib import Path
 from simple_socket_client import SimpleSocketClient, SimpleSocketClientException
 from typing import Optional
 
@@ -43,6 +45,9 @@ class CheckSumError(CommunicationError):
 
 
 class DataTransport(ABC):
+    def __init__(self):
+        self.port = None
+
     @abstractmethod
     def ask(self, package: bytes):
         pass
@@ -50,6 +55,8 @@ class DataTransport(ABC):
 
 class SerialDataTransport(DataTransport):
     def __init__(self, port: str, baudrate=9600, parity=serial.PARITY_NONE, bytesize=8, stopbits=1, timeout=0.05):
+        super().__init__()
+        self.port = port
         try:
             self.__connection = serial.Serial(port=port, baudrate=baudrate, parity=parity,
                                               bytesize=bytesize, stopbits=stopbits, timeout=timeout)
@@ -72,11 +79,13 @@ class SerialDataTransport(DataTransport):
 
 class TcpDataTransport(DataTransport):
     def __init__(self, host: str, port: int, timeout=5):
+        super().__init__()
+        self.port = '%s:%s' % (host, port)
         self.__connection = SimpleSocketClient(host, port)
         try:
             self.__connection.connect(timeout=timeout)
         except SimpleSocketClientException as err:
-            raise TransportError('%s:%s' % (host, port), err.args[0]) from err
+            raise TransportError(self.port, err.args[0]) from err
 
     def ask(self, package: bytes):
         try:
@@ -182,10 +191,27 @@ class Meters(object):
         try:
             self.add_meter(Meter(address, transport, **params))
             return True
-        except ConnectError:
+        except ConnectError as err:
             if self.__event_bus:
-                self.__event_bus.emit('failed_connect', address)
+                self.__event_bus.emit('failed_connect', address, transport.port, err.args[0])
             return False
+
+    def connect_meter_by_port(self, address: int, port: str, **kwarg) -> bool:
+        """ Connect a meter by port string and add it to the collection """
+        try:
+            matched = re.search(r"^(?P<host>\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):(?P<port>\d+)$", port)
+            if matched:
+                transport = TcpDataTransport(matched.group('host'), int(matched.group('port')))
+            elif Path(port).is_char_device():
+                transport = SerialDataTransport(port)
+            else:
+                raise TransportError(port, 'Port is invalid')
+        except TransportError as err:
+            if self.__event_bus:
+                self.__event_bus.emit('failed_connect', address, port, err.args[1])
+            return False
+
+        return self.connect_meter(address, transport, **kwarg)
 
     def add_meter(self, meter: Meter) -> None:
         """ Add a meter to the collection """

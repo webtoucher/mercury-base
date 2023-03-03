@@ -19,7 +19,7 @@ $ pip install mercury-base
 Либо добавьте в файл requirements.txt вашего проекта на python в качестве зависимости:
 
 ```
-mercury-base~=1.5
+mercury-base~=1.6
 ```
 
 ## Использование
@@ -36,6 +36,15 @@ meter = Meter(12345678, transport)
 print('Модель счётчика - Меркурий %s, серийный номер %s' % meter.model, meter.serial_number)
 current_power = meter.command('get_load_power')
 print('Текущая мощность в нагрузке - %s кВт' % current_power)
+```
+
+Возможно подключение к счётчику по TCP/IP:
+
+```python
+from mercury_base import Meter, TcpDataTransport
+
+transport = TcpDataTransport('192.168.0.2', 5051)
+meter = Meter(12345678, transport)
 ```
 
 Возможно подключение к счётчику по TCP/IP:
